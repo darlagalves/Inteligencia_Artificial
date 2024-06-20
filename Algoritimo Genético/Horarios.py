@@ -14,7 +14,7 @@ tamanho_torneio = 8
 geracoes = 100
 taxa_mutacao = 10
 qtd_melhores = 20
-torneio_roleta = True       # True = torneio e False = roleta
+torneio_roleta = False       # True = torneio e False = roleta
 pontos = True               # True = 1 ponto e False = 2 pontos
 tamanho_coluna = 5
 tamanho_horario = (5, 6)
@@ -258,7 +258,10 @@ for aux in range(geracoes):
         melhores = selecao_torneio(tamanho_torneio, pop_fitness, populacao)
     else:
         melhores = separarMelhores(pop_fitness, populacao, tamanho_populacao)
+    print(melhores)
+    print("\n\n\n\n")
     recomb = sortearCasais(qtd_melhores)
+    print(recomb)
     if pontos:
         pontoCorte = gerarPontoCorte(tamanho_coluna)
         filhos = recombinar(pontoCorte, recomb, melhores)

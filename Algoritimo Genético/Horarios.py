@@ -9,14 +9,15 @@ import altair as alt
 from collections import Counter
 
 #pegar informações de entrada: tamanho da popu, numr de gerações, taxa de mutação, quantidade de melhores por geração
-tamanho_populacao = 10
+tamanho_populacao = 100
 tamanho_torneio = 8
-geracoes = 100
+geracoes = 1000
 taxa_mutacao = 10
 qtd_melhores = 20
-torneio_roleta = False       # True = torneio e False = roleta
-pontos = True               # True = 1 ponto e False = 2 pontos
+torneio_roleta = True       # True = torneio e False = roleta
+pontos = False               # True = 1 ponto e False = 2 pontos
 tamanho_coluna = 5
+tamanho_linha = 6
 tamanho_horario = (5, 6)
 
 #criar população - pegar o tamanho definido população de matrizes de horários
@@ -91,49 +92,25 @@ def calcularFitness(horarios):
                         consecutivos = 1
                 
                 if consecutivos == 2:
-                    fitness_score += 20  # Aula dupla
+                    fitness_score += 10 # Aula dupla
                 elif consecutivos == 3:
-                    fitness_score -= 10  # Três aulas seguidas
+                    fitness_score -= 5  # Três aulas seguidas
                 elif consecutivos == 4:
-                    fitness_score -= 20  # Quatro aulas seguidas
-        
-        # Verificar aulas duplas, triplas ou quádruplas entre colunas
-        for col in range(len(horario[0])):
-            consecutivos = 1
-            for row in range(1, len(horario)):
-                if horario[row][col] == horario[row - 1][col]:
-                    consecutivos += 1
-                else:
-                    consecutivos = 1
-                
-                if consecutivos == 2:
-                    fitness_score += 20  # Aula dupla
-                elif consecutivos == 3:
-                    fitness_score -= 10  # Três aulas seguidas
-                elif consecutivos == 4:
-                    fitness_score -= 30  # Quatro aulas seguidas
-
+                    fitness_score -= 10  # Quatro aulas seguidas
+                    
         # Verificar localização das aulas vagas
         for linha in horario:
             if linha[0] == 'Vaga':
-                fitness_score += 20  # Prioriza vaga no início da linha
+                fitness_score += 200  # Aumentar a recompensa para vaga no início da linha
             if linha[-1] == 'Vaga':
-                fitness_score += 20  # Prioriza vaga no final da linha
+                fitness_score += 200  # Aumentar a recompensa para vaga no final da linha
             for j in range(1, len(linha) - 1):
                 if linha[j] == 'Vaga':
-                    fitness_score -= 30  # Penaliza vaga no meio da linha
-
-        for col in range(len(horario[0])):
-            if horario[0][col] == 'Vaga':
-                fitness_score += 20  # Prioriza vaga no início da coluna
-            if horario[-1][col] == 'Vaga':
-                fitness_score += 20  # Prioriza vaga no final da coluna
-            for row in range(1, len(horario) - 1):
-                if horario[row][col] == 'Vaga':
-                    fitness_score -= 30 # Penaliza vaga no meio da coluna
+                    fitness_score -= 50  # Aumentar a penalização para vaga no meio da linha
 
         fitness.append(fitness_score)
     return fitness
+
 
 def selecao_torneio(tamanho_torneio, fitness, horarios):
     selecionados = []
@@ -172,9 +149,11 @@ def recombinar(ponto_corte, casais, melhores_horarios):
     """Realiza o cruzamento entre os pais."""
     filhos = []
     for casal in casais:
+        #print("\n\n\n")
+        #print(melhores_horarios[0])
         pai1_idx, pai2_idx = casal
-        pai1 = melhores_horarios[pai1_idx]
-        pai2 = melhores_horarios[pai2_idx]
+        pai1 = melhores_horarios[casal[0]]
+        pai2 = melhores_horarios[casal[1]]
         filho1 = []
         filho2 = []
         # Realiza o crossover na posição do ponto de corte para cada linha
@@ -198,9 +177,10 @@ def recombinar2(pontos_corte, casais, melhores_horarios):
     ponto_corte_coluna, ponto_corte_linha = pontos_corte
     
     for casal in casais:
-        pai1_idx, pai2_idx = casal
-        pai1 = melhores_horarios[pai1_idx]
-        pai2 = melhores_horarios[pai2_idx]
+        #pai1_idx, pai2_idx = casal
+        
+        pai1 = melhores_horarios[casal[0]]
+        pai2 = melhores_horarios[casal[1]]
         filho1 = [linha[:] for linha in pai1]
         filho2 = [linha[:] for linha in pai2]  
         
@@ -250,25 +230,41 @@ def misturarNovosAntigos(melhores_horarios, filhos, tamanho_populacao):
 #separar os melhores pelo fitness - cruzamento de matrizes
 #subatituir os de piores fitness pelos filhos
 #pegar o maior fitness, a posição dele vai ser a posição do melhor horario
-
+melhor_horario_geral = None
+melhor_fitness_geral = 0
 for aux in range(geracoes):
     populacao = criarHorarios(tamanho_populacao)
     pop_fitness = calcularFitness(populacao)
     if torneio_roleta:
         melhores = selecao_torneio(tamanho_torneio, pop_fitness, populacao)
     else:
-        melhores = separarMelhores(pop_fitness, populacao, tamanho_populacao)
-    print(melhores)
-    print("\n\n\n\n")
+        melhores = separarMelhores(pop_fitness, populacao, qtd_melhores)
+    #print(melhores)
+    #print("\n\n\n\n")
     recomb = sortearCasais(qtd_melhores)
-    print(recomb)
+    #print(recomb)
     if pontos:
         pontoCorte = gerarPontoCorte(tamanho_coluna)
         filhos = recombinar(pontoCorte, recomb, melhores)
     else:
-        pontosCorte = gerarPontoCorte2(tamanho_coluna)
+        pontosCorte = gerarPontoCorte2(tamanho_coluna, tamanho_linha)
         filhos = recombinar2(pontosCorte, recomb, melhores)
     filhos = gerarMutacao(filhos, taxa_mutacao, tamanho_horario)
     piores_elementos = separarPiores(pop_fitness, populacao, qtd_melhores)
     populacao = substituirPioresPorFilhos(populacao, piores_elementos, filhos)
+    print("\n Geração: ", aux)
+    best_fitness =  max(pop_fitness)
+    print(" Maior Fitness: ", best_fitness)
+    indice_melhor_g = pop_fitness.index(best_fitness)
+    melhor_horario_g = populacao[indice_melhor_g]
+
+    # Atualizar o melhor horário geral
+    if best_fitness > melhor_fitness_geral:
+        melhor_fitness_geral = best_fitness
+        melhor_horario_geral = melhor_horario_g
+    
     aux = aux + 1
+    
+print("\n\nMelhor horário geral (maior fitness):")
+print(np.array(melhor_horario_geral))
+print(f"Fitness: {melhor_fitness_geral}")
